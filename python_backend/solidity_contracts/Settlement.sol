@@ -1,5 +1,7 @@
 pragma solidity >=0.7.0 <0.9.0;
 
+//"SPDX-License-Identifier: UNLICENSED"
+
 //import "";
 
 contract Settlement {
@@ -30,7 +32,7 @@ contract Settlement {
     int private merchant_payout; // amount payed to merchant (net_total - costs);
     uint private settlement_time; // stored as Unix Timestamp;
     uint private transaction_count; // store current count;
-    uint private max_transaction_count = 1000; // store max number of transactions this can hold; TODO: Figure out optimal number for this.
+    uint private max_transaction_count = 100000; // store max number of transactions this can hold; TODO: Figure out optimal number for this.
     bool private partner_block_set;
     address private partner_block;
     Transaction[] private transactions; // array of transactions;
@@ -44,16 +46,18 @@ contract Settlement {
     Settlement_State private settlementState;
     
     constructor(address _owner, address _partner_block) {
-        //Set owner address
-        owner = _owner;
-        //Set initial state as open;
-        settlementState = Settlement_State.OPEN;
+        owner = _owner; //Set owner address
+        settlementState = Settlement_State.OPEN; //Set initial state as open;
+
         //initialize sale variables;
         total_number_sales = 0;
         total_amount_sales = 0;
+
         //initialize return variables;
         total_number_returns = 0;
         total_amount_returns = 0;
+
+        //sets a partner block if needed
         if (_partner_block != address(0)){
             partner_block_set = true;
             partner_block = _partner_block;
@@ -69,7 +73,39 @@ contract Settlement {
         require(msg.sender == _allowed, "Not the owner.");
         _;
     }
-    
+
+    //********************************************************************************
+    // Function: addSaleTransaction
+    // Parameters: _time - send a unix timestamp; _amount - the money amount, send
+    //  multiplied by 100 to account for decimals; _digits - last 4 of card number;
+    // Events:
+    // Notes:
+    // TODO:
+    //********************************************************************************
+    function addSaleTransaction(uint _time, uint _amount, uint _digits) public ownerOnly(owner){
+        total_number_sales += 1;
+        total_amount_sales += int(_amount);
+        net_total = total_amount_sales - total_amount_returns;
+
+        transactions.push(Transaction(Transaction_Type.SALE, _time, _amount, _digits));
+    }
+
+    //********************************************************************************
+    // Function: addReturnTransaction
+    // Parameters: _time - send a unix timestamp; _amount - the money amount, send
+    //  multiplied by 100 to account for decimals; _digits - last 4 of card number;
+    // Events:
+    // Notes:
+    // TODO:
+    //********************************************************************************
+    function addReturnTransaction(uint _time, uint _amount, uint _digits) public ownerOnly(owner){
+        total_number_returns += 1;
+        total_amount_returns += int(_amount);
+        net_total = total_amount_sales - total_amount_returns;
+
+        transactions.push(Transaction(Transaction_Type.RETURN, _time, _amount, _digits));
+    }
+
     //********************************************************************************
     // Function: 
     // Parameters: 
@@ -97,9 +133,9 @@ contract Settlement {
     }
     
     //********************************************************************************
-    // Function: 
-    // Parameters: 
-    // Events: 
+    // Function: settleTransactions
+    // Parameters: _time - ; _payout - ;
+    // Events: None
     // Notes: 
     // TODO: 
     //********************************************************************************
@@ -110,13 +146,24 @@ contract Settlement {
     }
     
     //********************************************************************************
-    // Function: 
-    // Parameters: 
-    // Events: 
+    // Function: viewTransactions
+    // Parameters: None
+    // Events: None
     // Notes: 
     // TODO: 
     //********************************************************************************
     function viewTransactions() view public returns (Transaction[] memory){
         return transactions; // Returns the transactions array;
+    }
+
+    //********************************************************************************
+    // Function: viewTSettlementState
+    // Parameters: None
+    // Events: None
+    // Notes:
+    // TODO:
+    //********************************************************************************
+    function viewSettlementState() view public returns (Settlement_State){
+        return settlementState;
     }
 }
